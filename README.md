@@ -2,7 +2,7 @@
 
 ## About Me
 
-Hello! I'm Rishabh, a Computer Science student passionate about AI, Cyber Security, and Cloud Computing.
+Hello! I'm Vansh, a Computer Science student passionate about AI, Cyber Security, and Cloud Computing.
 
 ## Why I'm Doing This Challenge
 
