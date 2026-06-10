@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriScope Pro</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{margin:0;background:linear-gradient(135deg,#020617,#07142f);color:#fff;font-family:Arial,sans-serif;padding:20px}
+.container{max-width:1400px;margin:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:18px}
+.card{background:#0f1b35;border:1px solid #223355;border-radius:16px;padding:18px}
+h1{color:#22c55e}
+input,select,button{width:100%;padding:10px;margin:5px 0;border-radius:8px;background:#081224;color:white;border:1px solid #334155}
+button{background:#22c55e;border:none}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;border-bottom:1px solid #223355;text-align:center}
+ul{padding-left:18px}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🍱 NutriScope Pro</h1>
+<p>Advanced Nutrition Intelligence Platform</p>
+
+<div class="grid">
+<div class="card">
+<h2>Profile</h2>
+<input placeholder="Age">
+<input placeholder="Height">
+<input placeholder="Weight">
+<select><option>Moderate</option></select>
+<button>Update Targets</button>
+</div>
+
+<div class="card">
+<h2>Food Logging</h2>
+<input type="file">
+<select><option>Rice</option><option>Oats</option><option>Chicken</option></select>
+<button>Add Food</button>
+</div>
+
+<div class="card">
+<h2>Energy Progress</h2>
+<canvas id="energy"></canvas>
+</div>
+
+<div class="card">
+<h2>Macro Breakdown</h2>
+<canvas id="macro"></canvas>
+</div>
+
+<div class="card">
+<h2>Micronutrient Radar</h2>
+<canvas id="radar"></canvas>
+</div>
+
+<div class="card">
+<h2>Risk Analysis</h2>
+<ul>
+<li>Low fiber risk</li>
+<li>Potential iron deficiency</li>
+<li>Low Vitamin D</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Advanced Recommendations</h2>
+<ul>
+<li>Add Paneer, Soybean, Dal</li>
+<li>Add Citrus Fruits</li>
+<li>Increase Green Vegetables</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>2-Day Smart Meal Planner</h2>
+<p><b>Day 1</b><br>Oats + Milk + Banana<br>Rice + Dal + Salad<br>Roti + Paneer</p>
+<p><b>Day 2</b><br>Poha + Milk<br>Rajma Rice<br>Roti + Chana</p>
+</div>
+</div>
+
+<div class="card">
+<h2>Nutrient Dashboard</h2>
+<table>
+<tr><th>Nutrient</th><th>Consumed</th><th>Target</th></tr>
+<tr><td>Protein</td><td>0</td><td>84</td></tr>
+<tr><td>Fiber</td><td>0</td><td>30</td></tr>
+<tr><td>Iron</td><td>0</td><td>18</td></tr>
+<tr><td>Zinc</td><td>0</td><td>11</td></tr>
+<tr><td>Magnesium</td><td>0</td><td>400</td></tr>
+<tr><td>Potassium</td><td>0</td><td>3500</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h2>Nutrition Sources</h2>
+<ul>
+<li>USDA FoodData Central</li>
+<li>ICMR Nutrition Guidelines</li>
+<li>WHO Recommendations</li>
+<li>FAO References</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Educational Disclaimer</h2>
+<p>This tool is for educational purposes and should not replace professional medical advice.</p>
+</div>
+</div>
+
+<script>
+new Chart(document.getElementById('energy'),{
+type:'bar',
+data:{labels:['Consumed','Target'],datasets:[{data:[1200,2200]}]}
+});
+new Chart(document.getElementById('macro'),{
+type:'pie',
+data:{labels:['Protein','Carbs','Fat'],datasets:[{data:[25,50,25]}]}
+});
+new Chart(document.getElementById('radar'),{
+type:'radar',
+data:{labels:['Iron','Calcium','Vit C','Vit D','B12','Zinc'],
+datasets:[{data:[40,70,65,20,35,50]}]}
+});
+</script>
+</body>
+</html>
