@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prior Authorization Story Simulator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // Extend Tailwind with the same blue healthcare-education palette
+  // used throughout this design system, so this artifact reads as a
+  // sibling of the Workflow Simulator rather than a separate product.
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          navy: { 900:'#0a1f3d', 800:'#0d2b56' },
+          blue: { 700:'#15407e', 600:'#1e57a6', 500:'#2f72c9', 400:'#5b96dd', 300:'#8fb9ec', 100:'#dceaf9', 50:'#eef5fc' },
+          ink: { DEFAULT:'#0c1420', soft:'#33425a' },
+          amber: { DEFAULT:'#b9852f', bg:'#fbf0db' },
+          green: { DEFAULT:'#2f7a52', bg:'#e1f1e7' },
+          red: { DEFAULT:'#a3402f', bg:'#f7e3dd' },
+        },
+        fontFamily: {
+          display: ['Arial Narrow','Arial','sans-serif'],
+          body: ['Arial','Helvetica','sans-serif'],
+        },
+        boxShadow: {
+          card: '0 8px 24px rgba(10,31,61,0.16)',
+          'card-sm': '0 2px 8px rgba(10,31,61,0.12)',
+        }
+      }
+    }
+  }
+</script>
+<style>
+  /* A handful of things Tailwind utility classes can't express cleanly:
+     keyframes, the chat-bubble tail, and print-safe scrollbars. */
+  html, body { background:#0a1f3d; }
+  body{
+    background: linear-gradient(180deg, #0a1f3d 0%, #15407e 170px, #eef5fc 170px);
+    font-family: Arial, Helvetica, sans-serif;
+    color:#0c1420;
+  }
+  .font-display{ font-family:'Arial Narrow', Arial, sans-serif; }
+
+  /* Chat feed scroll container */
+  #chat-feed{
+    scroll-behavior:smooth;
+  }
+  #chat-feed::-webkit-scrollbar{ width:8px; }
+  #chat-feed::-webkit-scrollbar-thumb{ background:#8fb9ec; border-radius:8px; }
+  #chat-feed::-webkit-scrollbar-track{ background:transparent; }
+
+  /* Bubble entrance animation */
+  @keyframes bubbleIn{
+    from{ opacity:0; transform:translateY(10px) scale(0.98); }
+    to{ opacity:1; transform:translateY(0) scale(1); }
+  }
+  .bubble-anim{ animation: bubbleIn .28s ease; }
+
+  @keyframes narratorIn{
+    from{ opacity:0; }
+    to{ opacity:1; }
+  }
+  .narrator-anim{ animation: narratorIn .4s ease; }
+
+  /* speech bubble tails */
+  .tail-left::before{
+    content:"";
+    position:absolute;
+    left:-7px; top:14px;
+    border-width:7px 8px 7px 0;
+    border-style:solid;
+    border-color:transparent #dceaf9 transparent transparent;
+  }
+  .tail-right::before{
+    content:"";
+    position:absolute;
+    right:-7px; top:14px;
+    border-width:7px 0 7px 8px;
+    border-style:solid;
+    border-color:transparent transparent transparent #1e57a6;
+  }
+
+  @keyframes popIn{
+    from{ transform:scale(0.94) translateY(8px); opacity:0; }
+    to{ transform:scale(1) translateY(0); opacity:1; }
+  }
+  .modal-pop{ animation: popIn .2s ease; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.01ms !important; }
+  }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div class="max-w-2xl mx-auto px-4 pb-10">
+
+  <!-- ============================================================
+       MASTHEAD — mirrors the simulator's header treatment
+       ============================================================ -->
+  <header class="pt-6 pb-3">
+    <p class="font-display uppercase tracking-widest text-[11px] text-blue-300 font-bold mb-1">
+      US Healthcare Administration &middot; A Story Walkthrough
+    </p>
+    <h1 class="font-display text-white text-2xl sm:text-3xl font-extrabold leading-tight">
+      Prior Authorization Story Simulator
+    </h1>
+    <p class="text-blue-100 text-sm mt-1">
+      Follow Rahul's case from diagnosis to approval, scene by scene.
+    </p>
+  </header>
+
+  <!-- ============================================================
+       PROGRESS BAR — 8 scenes, same dot/track language as before
+       ============================================================ -->
+  <section class="bg-white rounded-[10px] shadow-card border border-blue-100 px-4 sm:px-5 py-4 mt-2">
+    <div class="relative flex items-start justify-between" id="progress-track">
+      <!-- populated by JS: connecting line + 8 dots -->
+    </div>
+  </section>
+
+  <!-- ============================================================
+       CASE FILE STRIP — scene title + StarCare disclaimer chip
+       ============================================================ -->
+  <section class="mt-3 flex items-center justify-between gap-3 flex-wrap">
+    <div>
+      <p class="font-display uppercase tracking-wide text-[11px] text-blue-700 font-bold" id="scene-eyebrow">Scene 1 of 8</p>
+      <h2 class="font-display text-lg font-extrabold text-navy-900" id="scene-title">Doctor Visit</h2>
+    </div>
+    <span class="inline-flex items-center gap-1 bg-blue-50 border border-blue-300 text-blue-700 text-[11px] font-bold px-3 py-1 rounded-full">
+      🏢 StarCare Health is an illustrative example
+    </span>
+  </section>
+
+  <!-- ============================================================
+       CHAT FEED — append-only via createElement + appendChild
+       ============================================================ -->
+  <section class="bg-white rounded-[10px] shadow-card border border-blue-100 mt-3 overflow-hidden">
+    <div id="chat-feed" class="px-3 sm:px-5 py-5 flex flex-col gap-3 h-[440px] overflow-y-auto"></div>
+  </section>
+
+  <!-- ============================================================
+       CHOICE PANEL — 2 choices after each scene
+       ============================================================ -->
+  <section id="choice-panel" class="mt-3"></section>
+
+  <!-- ============================================================
+       RESTART
+       ============================================================ -->
+  <div class="flex justify-center mt-5">
+    <button id="btn-restart" class="text-blue-700 text-sm font-bold hover:text-blue-900 hover:underline">
+      ↺ Restart Story
+    </button>
+  </div>
+
+  <p class="text-center text-[11px] text-blue-700/70 mt-6">
+    Educational simulation only. StarCare Health is a fictional, illustrative payer. Names, workflows, and outcomes are simplified for teaching purposes and do not represent any real patient, provider, or insurer.
+  </p>
+</div>
+
+<!-- Modal root for scene-end summaries / takeaways -->
+<div id="modal-root"></div>
+
+<script>
+/* ================================================================
+   PRIOR AUTHORIZATION STORY SIMULATOR
+   Vanilla JS. No innerHTML on the chat container — every bubble and
+   narrator line is built with document.createElement + appendChild.
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   1. CHARACTERS
+   ---------------------------------------------------------------- */
+const CHAR = {
+  RAHUL:   { key:'rahul',  name:'Rahul',  emoji:'👦', side:'left'  },
+  PRIYA:   { key:'priya',  name:'Priya',  emoji:'👧', side:'right' },
+};
+
+/* ----------------------------------------------------------------
+   2. STORY DATA
+   Each scene = { id, title, beats:[...], choices:[...] }
+   A "beat" is one line in the feed: either a chat bubble
+   ({type:'chat', who, text}) or a centered narrator/doctor line
+   ({type:'narrator', text}).
+   Choices alter the NEXT scene's opening beats (stored per-choice
+   as `followUp` arrays) without branching the overall 8-scene plot,
+   since the plot beats are fixed by the brief.
+   ---------------------------------------------------------------- */
+const SCENES = [
+  // ---------------------------------------------------------- SCENE 1
+  {
+    id: 'doctor-visit',
+    title: 'Doctor Visit',
+    beats: [
+      { type:'narrator', text:'City Medical Center — Tuesday morning.' },
+      { type:'narrator', text:'Rahul has had stiff, swollen joints for weeks. He finally booked an appointment.' },
+      { type:'chat', who:'RAHUL', text:"My hands are so stiff every morning, it takes almost an hour to loosen up. It's getting hard to even hold a cup of chai." },
+      { type:'narrator', text:'Dr. Patel examines his hands and reviews his blood work.' },
+      { type:'narrator', text:'Dr. Patel: "Your bloodwork and symptoms point to Rheumatoid Arthritis — an autoimmune condition where your immune system attacks your joints."' },
+      { type:'narrator', text:'Dr. Patel: "I want to start you on Humira. It\'s a biologic medication that can slow the joint damage significantly if we start early."' },
+      { type:'chat', who:'RAHUL', text:'Okay... is that something I can just pick up at the pharmacy today?' },
+      { type:'narrator', text:'Dr. Patel: "Not quite. A medication like this almost always needs approval from your insurance first. My office will start that process for you."' },
+    ],
+    choices: [
+      {
+        id:'worried',
+        label:'😟 "Wait, why does insurance need to approve my medicine?"',
+        followUp: [
+          { type:'chat', who:'RAHUL', text:"Wait — why does my insurance need to approve something my own doctor already prescribed?" },
+        ]
+      },
+      {
+        id:'practical',
+        label:'🙂 "Okay, what do I need to do next?"',
+        followUp: [
+          { type:'chat', who:'RAHUL', text:"Okay, that makes sense. What do I need to do on my end?" },
+        ]
+      }
+    ]
+  },
+
+  // ---------------------------------------------------------- SCENE 2
+  {
+    id: 'insurance-roadblock',
+    title: 'Insurance Roadblock',
+    beats: [
+      { type:'narrator', text:'Later that day, at the front desk of Dr. Patel\'s office.' },
+      { type:'narrator', text:'The office submits a Prior Authorization (PA) request straight to Rahul\'s insurer, StarCare Health (illustrative example).' },
+      { type:'narrator', text:'No pharmacy is involved at this stage — this is a request between the provider\'s office and the payer only.' },
+    ],
+    flowDiagram: [
+      { label:'Provider', sub:'Dr. Patel\'s office' },
+      { label:'PA Request', sub:'Clinical case sent for review' },
+      { label:'Payer', sub:'StarCare Health (example)' },
+    ],
+    beatsAfterDiagram: [
+      { type:'chat', who:'PRIYA', text:"Hi Rahul, I'm Priya — I work in healthcare operations and I help patients like you understand what's happening behind the scenes with requests like this." },
+      { type:'chat', who:'RAHUL', text:"Oh good, because I genuinely don't understand any of this." },
+      { type:'chat', who:'PRIYA', text:"That's exactly what I'm here for. Once this request is approved, it gets saved permanently on file — so for an ongoing medication like Humira, you typically won't need to repeat this step every refill." },
+    ],
+    choices: [
+      {
+        id:'why-now',
+        label:'🤔 "Why does this happen before I even fill the prescription?"',
+        followUp: [
+          { type:'chat', who:'RAHUL', text:"Why does this whole approval thing happen before I even try to fill the prescription?" }
+        ]
+      },
+      {
+        id:'how-long',
+        label:'⏱️ "How long does this usually take?"',
+        followUp: [
+          { type:'chat', who:'RAHUL', text:"How long does something like this usually take to get sorted out?" }
+        ]
+      }
+    ]
+  },
+
+  // ---------------------------------------------------------- SCENE 3
+  {
+    id: 'what-is-pa',
+    title: 'What is PA?',
+    beats: [
+      { type:'chat', who:'PRIYA', text:"Good question. Prior Authorization, or PA, is a check insurers use before covering certain medications or procedures — mostly ones that are expensive, or that have cheaper alternatives worth trying first." },
+      { type:'chat', who:'RAHUL', text:"So it's just paperwork, basically?" },
+      { type:'chat', who:'PRIYA', text:"Partly — but it's not only bureaucracy. For a fast-moving condition like Rheumatoid Arthritis, delays in starting treatment can actually let joint damage progress while you wait. The paperwork has real clinical stakes, not just administrative ones." },
+      { type:'narrator', text:'Priya pulls up a note on her tablet.' },
+      { type:'chat', who:'PRIYA', text:"This isn't rare, either. The AMA's 2023 physician survey found that PA delays access to care in the large majority of cases physicians see." },
+      { type:'chat', who:'RAHUL', text:"So this could genuinely slow down my treatment." },
+      { type:'chat', who:'PRIYA', text:"It can. That's exactly why we walk through this together now — so you know what to expect and what to push on if it stalls." },
+    ],
+    choices: [
+      {
+        id:'step-therapy',
+        label:'💊 "What is step therapy, exactly?"',
+        followUp: [
+          { type:'chat', who:'RAHUL', text:"You mentioned cheaper alternatives — is that the same thing as 'step therapy'?" }
+        ]
+      },
+      {
+        id:'my-case',
+        label:'📋 "What happens to my case specifically now?"',
+        followUp: [
+          { type:'chat', who:'RAHUL', text:"Okay. So what happens to my case specifically, right now?" }
+        ]
+      }
+    ]
+  },
+
+  // ---------------------------------------------------------- SCENE 4
+  {
+    id: 'insurance-review',
+    title: 'Insurance Review',
+    beats: [
+      { type:'chat', who:'PRIYA', text:"Right now, StarCare Health's review team is checking four things on your request." },
+    ],
+    checklist: [
+      { label:'Eligibility', desc:'Is Rahul actually covered under this plan, and is the plan active today?', why:'If coverage lapsed or the plan doesn\'t include this benefit, nothing else matters — this is checked first.' },
+      { label:'Clinical Documentation', desc:'Dr. Patel\'s notes, exam findings, and bloodwork supporting the diagnosis.', why:'The payer never sees Rahul in person, so the chart notes are the only evidence they have to go on.' },
+      { label:'ICD-10 Diagnosis Match', desc:'Does the billing code for "Rheumatoid Arthritis" match what Humira is approved to treat?', why:'If the diagnosis code on the form doesn\'t line up with the drug\'s approved uses, it gets flagged automatically — even if the diagnosis itself is correct.' },
+      { label:'Step Therapy History', desc:'Has Rahul already tried a more conventional, lower-cost medication first?', why:'Many plans require "failing" a cheaper option before approving a biologic like Humira — this is the step most often missing on a first submission.' },
+    ],
+    beatsAfterChecklist: [
+      { type:'chat', who:'PRIYA', text:"Every one of these has to line up. If even one is missing or unclear, the request usually gets sent back instead of approved outright." },
+      { type:'chat', who:'RAHUL', text:"That feels like a lot of room for something to go wrong." },
+      { type:'chat', who:'PRIYA', text:"It is. And it's a very common spot for things to go wrong, too." },
+    ],
+    choices: [
+      {
+        id:'which-risk',
+        label:'⚠️ "Which one usually causes problems?"',
+        followUp: [
+          { type:'chat', who:'RAHUL', text:"Out of those four, which one usually ends up being the problem?" }
+        ]
+      },
+      {
+        id:'my-chart',
+        label:'📁 "Does Dr. Patel\'s office double-check this before sending it?"',
+        followUp: [
+          { type:'chat', who:'RAHUL', text:"Does Dr. Patel's office double-check all this before they send it over?" }
+        ]
+      }
+    ]
+  },
+
+  // ---------------------------------------------------------- SCENE 5
+  {
+    id: 'denial',
+    title: 'Denial',
+    beats: [
+      { type:'narrator', text:'Three business days later, a letter arrives.' },
+      { type:'narrator', text:'StarCare Health (illustrative example): "Request Denied — Step therapy documentation not on file."' },
+      { type:'chat', who:'RAHUL', text:"Denied?! Does that mean I just... don't get the medication?" },
+      { type:'chat', who:'PRIYA', text:"Take a breath — denied does not mean permanent. It almost always means one specific piece was missing, not that the answer is final." },
+      { type:'chat', who:'RAHUL', text:"So what was actually missing?" },
+      { type:'chat', who:'PRIYA', text:"In your case, the step therapy history — proof that you tried a conventional medication like methotrexate first — wasn't included with the original submission." },
+      { type:'narrator', text:'Priya makes a note on the case file.' },
+      { type:'chat', who:'PRIYA', text:"On the system side, this is a routine but costly pattern: resolving a denial like this typically takes a meaningful chunk of staff time — pulling records, calling the payer, and re-filing — time that's invisible to most patients but very real for the office handling it." },
+    ],
+    choices: [
+      {
+        id:'my-fault',
+        label:'😕 "Did I do something wrong?"',
+        followUp: [
+          { type:'chat', who:'RAHUL', text:"Did I mess something up by not mentioning the other medication I tried years ago?" }
+        ]
+      },
+      {
+        id:'fix-it',
+        label:'💪 "Okay — how do we fix this?"',
+        followUp: [
+          { type:'chat', who:'RAHUL', text:"Okay. I don't want to dwell on it — how do we actually fix this?" }
+        ]
+      }
+    ]
+  },
+
+  // ---------------------------------------------------------- SCENE 6
+  {
+    id: 'appeal',
+    title: 'Appeal',
+    beats: [
+      { type:'chat', who:'PRIYA', text:"Good news: you did try methotrexate two years ago for early joint pain — it's in your old chart, it just wasn't pulled into this submission." },
+      { type:'chat', who:'PRIYA', text:"Here's the plan. First, we gather records proving that history. Second, Dr. Patel writes a Letter of Medical Necessity explaining clinically why Humira is the right next step for you specifically." },
+      { type:'chat', who:'RAHUL', text:"And then what — we just send it again?" },
+      { type:'chat', who:'PRIYA', text:"Not quite the same way. This time it goes in as a formal appeal, with the missing documentation attached, so StarCare Health is reviewing a complete picture instead of a partial one." },
+      { type:'narrator', text:'Dr. Patel\'s office gathers the old chart notes and drafts the Letter of Medical Necessity that afternoon.' },
+      { type:'chat', who:'RAHUL', text:"That actually sounds manageable. I was picturing starting from zero." },
+      { type:'chat', who:'PRIYA', text:"You're not starting over — you're filling in one specific gap. That's the difference between a denial and a dead end." },
+    ],
+    choices: [
+      {
+        id:'how-fast',
+        label:'⏱️ "How fast does an appeal usually move?"',
+        followUp: [
+          { type:'chat', who:'RAHUL', text:"How fast does an appeal like this usually move, compared to the first request?" }
+        ]
+      },
+      {
+        id:'what-if-again',
+        label:'😬 "What if it gets denied again?"',
+        followUp: [
+          { type:'chat', who:'RAHUL', text:"Honest question — what happens if it gets denied again after all this?" }
+        ]
+      }
+    ]
+  },
+
+  // ---------------------------------------------------------- SCENE 7
+  {
+    id: 'approval',
+    title: 'Approval',
+    beats: [
+      { type:'narrator', text:'One week later.' },
+      { type:'narrator', text:'StarCare Health (illustrative example): "Appeal Approved — Reference #SC-PA-48291."' },
+      { type:'chat', who:'RAHUL', text:"Wait, really? It actually went through?" },
+      { type:'chat', who:'PRIYA', text:"It did. The approval, along with that reference number, is saved permanently on Rahul's file." },
+      { type:'chat', who:'PRIYA', text:"That means for as long as you stay on Humira under this plan, you generally won't need to repeat the full PA process for this same medication." },
+      { type:'chat', who:'RAHUL', text:"So this whole thing was basically a one-time hurdle?" },
+      { type:'chat', who:'PRIYA', text:"For this drug, on this plan — yes, in most cases. You can finally start treatment without that hanging over you." },
+    ],
+    choices: [
+      {
+        id:'relief',
+        label:'😌 "What a relief. Thank you, Priya."',
+        followUp: [
+          { type:'chat', who:'RAHUL', text:"What a relief. Thank you for actually explaining all of this, Priya." }
+        ]
+      },
+      {
+        id:'lesson',
+        label:'🧠 "What should I take away from all this?"',
+        followUp: [
+          { type:'chat', who:'RAHUL', text:"Before we wrap up — what should I actually take away from this whole experience?" }
+        ]
+      }
+    ]
+  },
+
+  // ---------------------------------------------------------- SCENE 8
+  {
+    id: 'takeaways',
+    title: 'Takeaways',
+    beats: [
+      { type:'narrator', text:'City Medical Center — one month later. Rahul is two doses into treatment.' },
+      { type:'chat', who:'PRIYA', text:"Let's close the loop. There are really two sides to what just happened." },
+    ],
+    twoColumns: {
+      left: {
+        heading: 'Patient perspective — what Rahul learned',
+        points: [
+          'A doctor\'s prescription isn\'t the final step — insurer approval often comes first.',
+          'A denial is a specific, fixable gap, not a final verdict.',
+          'Step therapy history matters — keep a simple record of medications tried, even years back.',
+          'Once approved, an ongoing medication\'s PA is usually on file going forward.'
+        ]
+      },
+      right: {
+        heading: 'System perspective — how health systems track this',
+        points: [
+          'Denial rate: the share of PA requests rejected on first submission.',
+          'Appeal rate: how often denials are formally challenged rather than dropped.',
+          'Resolution time: days elapsed from request to final determination.',
+          'These metrics are exactly why a single missing field, like Rahul\'s step therapy history, gets tracked as a process problem, not just one patient\'s bad luck.'
+        ]
+      }
+    },
+    beatsAfterColumns: [
+      { type:'chat', who:'RAHUL', text:"I had no idea this much was happening behind the scenes." },
+      { type:'chat', who:'PRIYA', text:"Most patients don't — and that's the gap this walkthrough is meant to close." },
+    ],
+    choices: [] // final scene, no further choices
+  },
+];
+
+/* ----------------------------------------------------------------
+   3. STATE (in-memory only — no localStorage)
+   ---------------------------------------------------------------- */
+let state = {
+  sceneIndex: 0,
+  pendingChoiceResolved: false,
+};
+
+/* ----------------------------------------------------------------
+   4. DOM REFERENCES
+   ---------------------------------------------------------------- */
+const feedEl = document.getElementById('chat-feed');
+const choicePanelEl = document.getElementById('choice-panel');
+const progressTrackEl = document.getElementById('progress-track');
+const sceneEyebrowEl = document.getElementById('scene-eyebrow');
+const sceneTitleEl = document.getElementById('scene-title');
+
+/* ----------------------------------------------------------------
+   5. RENDER: PROGRESS BAR (8 dots + connecting line, same visual
+      language as the workflow simulator's tracker)
+   ---------------------------------------------------------------- */
+function renderProgressTrack(){
+  // Clear without innerHTML on the *chat* container — this is a
+  // different element (progress bar), so a controlled rebuild here
+  // is fine; the brief's restriction targets the chat feed only.
+  while(progressTrackEl.firstChild){ progressTrackEl.removeChild(progressTrackEl.firstChild); }
+
+  const line = document.createElement('div');
+  line.className = 'absolute h-[3px] bg-blue-100 top-[14px] left-[14px] right-[14px] z-0';
+  progressTrackEl.appendChild(line);
+
+  const fill = document.createElement('div');
+  const pct = state.sceneIndex === 0 ? 0 : (state.sceneIndex / (SCENES.length - 1)) * 100;
+  fill.className = 'absolute h-[3px] bg-blue-500 top-[14px] left-[14px] z-0 transition-all duration-300';
+  fill.style.width = `calc(${pct}% - ${pct === 0 ? 0 : 14}px)`;
+  if(pct === 0){ fill.style.width = '0px'; }
+  progressTrackEl.appendChild(fill);
+
+  SCENES.forEach((sc, i) => {
+    const step = document.createElement('div');
+    step.className = 'relative z-10 flex flex-col items-center flex-1 text-center';
+
+    const dot = document.createElement('div');
+    let dotClasses = 'w-7 h-7 rounded-full border-[3px] flex items-center justify-center text-[12px] font-extrabold transition-all ';
+    if(i < state.sceneIndex){
+      dotClasses += 'bg-blue-500 border-blue-500 text-white';
+    } else if(i === state.sceneIndex){
+      dotClasses += 'bg-white border-navy-900 text-navy-900 ring-4 ring-blue-100';
+    } else {
+      dotClasses += 'bg-white border-blue-100 text-ink-soft';
+    }
+    dot.className = dotClasses;
+    dot.textContent = i < state.sceneIndex ? '✓' : String(i + 1);
+    step.appendChild(dot);
+
+    const label = document.createElement('div');
+    label.className = `text-[10px] mt-1 leading-tight max-w-[64px] hidden sm:block font-semibold ${i === state.sceneIndex ? 'text-navy-900' : 'text-ink-soft'}`;
+    label.textContent = sc.title;
+    step.appendChild(label);
+
+    progressTrackEl.appendChild(step);
+  });
+}
+
+/* ----------------------------------------------------------------
+   6. RENDER: SCENE HEADER STRIP
+   ---------------------------------------------------------------- */
+function renderSceneHeader(){
+  sceneEyebrowEl.textContent = `Scene ${state.sceneIndex + 1} of ${SCENES.length}`;
+  sceneTitleEl.textContent = SCENES[state.sceneIndex].title;
+}
+
+/* ----------------------------------------------------------------
+   7. CHAT FEED BUILDERS — createElement + appendChild ONLY.
+      The chat feed container's innerHTML is never assigned.
+   ---------------------------------------------------------------- */
+
+/** Appends a single chat bubble for Rahul or Priya. */
+function appendChatBubble(characterKey, text){
+  const character = CHAR[characterKey];
+  const row = document.createElement('div');
+  row.className = `flex w-full ${character.side === 'left' ? 'justify-start' : 'justify-end'} bubble-anim`;
+
+  const wrap = document.createElement('div');
+  wrap.className = `flex items-end gap-2 max-w-[85%] ${character.side === 'left' ? 'flex-row' : 'flex-row-reverse'}`;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'w-8 h-8 rounded-full flex items-center justify-center text-base flex-shrink-0 ' +
+    (character.side === 'left' ? 'bg-blue-50 border border-blue-200' : 'bg-blue-600');
+  avatar.textContent = character.emoji;
+  wrap.appendChild(avatar);
+
+  const bubbleCol = document.createElement('div');
+  bubbleCol.className = 'flex flex-col';
+
+  const nameTag = document.createElement('span');
+  nameTag.className = `text-[10px] font-bold uppercase tracking-wide mb-0.5 px-1 ${character.side === 'left' ? 'text-blue-700 text-left' : 'text-blue-700 text-right'}`;
+  nameTag.textContent = character.name + (character.key === 'priya' ? ' · Healthcare Ops' : ' · Patient');
+  bubbleCol.appendChild(nameTag);
+
+  const bubble = document.createElement('div');
+  bubble.className = 'relative px-4 py-2.5 rounded-2xl text-[13.5px] leading-relaxed shadow-card-sm ' +
+    (character.side === 'left'
+      ? 'bg-blue-50 text-ink rounded-tl-sm tail-left'
+      : 'bg-blue-600 text-white rounded-tr-sm tail-right');
+  bubble.textContent = text;
+  bubbleCol.appendChild(bubble);
+
+  wrap.appendChild(bubbleCol);
+  row.appendChild(wrap);
+  feedEl.appendChild(row);
+}
+
+/** Appends a centered italic narrator/doctor line — never a bubble. */
+function appendNarratorLine(text){
+  const row = document.createElement('div');
+  row.className = 'w-full flex justify-center py-1 narrator-anim';
+
+  const p = document.createElement('p');
+  p.className = 'text-center italic text-[13px] text-ink-soft max-w-[90%]';
+  p.textContent = text;
+
+  row.appendChild(p);
+  feedEl.appendChild(row);
+}
+
+/** Appends the Provider → PA Request → Payer flow diagram (scene 2 only). */
+function appendFlowDiagram(steps){
+  const wrap = document.createElement('div');
+  wrap.className = 'flex items-center justify-center gap-2 sm:gap-3 py-3 narrator-anim';
+
+  steps.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = 'flex flex-col items-center bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-center min-w-[84px]';
+
+    const label = document.createElement('span');
+    label.className = 'font-display font-extrabold text-[12px] text-navy-900';
+    label.textContent = s.label;
+    card.appendChild(label);
+
+    const sub = document.createElement('span');
+    sub.className = 'text-[10px] text-ink-soft mt-0.5 leading-tight';
+    sub.textContent = s.sub;
+    card.appendChild(sub);
+
+    wrap.appendChild(card);
+
+    if(i < steps.length - 1){
+      const arrow = document.createElement('span');
+      arrow.className = 'text-blue-400 text-lg font-bold';
+      arrow.textContent = '→';
+      wrap.appendChild(arrow);
+    }
+  });
+
+  feedEl.appendChild(wrap);
+}
+
+/** Appends the four-item insurance review checklist (scene 4 only). */
+function appendChecklist(items){
+  const wrap = document.createElement('div');
+  wrap.className = 'flex flex-col gap-2 py-2 narrator-anim';
+
+  items.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5';
+
+    const headRow = document.createElement('div');
+    headRow.className = 'flex items-center gap-2';
+
+    const bullet = document.createElement('span');
+    bullet.className = 'w-2 h-2 rounded-full bg-blue-500 flex-shrink-0';
+    headRow.appendChild(bullet);
+
+    const label = document.createElement('span');
+    label.className = 'font-display font-extrabold text-[13px] text-navy-900';
+    label.textContent = item.label;
+    headRow.appendChild(label);
+
+    card.appendChild(headRow);
+
+    const desc = document.createElement('p');
+    desc.className = 'text-[12px] text-ink mt-1';
+    desc.textContent = item.desc;
+    card.appendChild(desc);
+
+    const why = document.createElement('p');
+    why.className = 'text-[11px] text-blue-700 mt-1 font-medium';
+    why.textContent = 'Why it matters: ' + item.why;
+    card.appendChild(why);
+
+    wrap.appendChild(card);
+  });
+
+  feedEl.appendChild(wrap);
+}
+
+/** Appends the two-column Patient vs System takeaways (scene 8 only). */
+function appendTwoColumns(cols){
+  const grid = document.createElement('div');
+  grid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 narrator-anim';
+
+  [cols.left, cols.right].forEach((col, idx) => {
+    const card = document.createElement('div');
+    card.className = idx === 0
+      ? 'bg-blue-50 border border-blue-200 rounded-lg p-3'
+      : 'bg-navy-900/5 border border-blue-300 rounded-lg p-3';
+
+    const heading = document.createElement('p');
+    heading.className = 'font-display font-extrabold text-[12.5px] text-navy-900 mb-2 uppercase tracking-wide';
+    heading.textContent = col.heading;
+    card.appendChild(heading);
+
+    const list = document.createElement('ul');
+    list.className = 'flex flex-col gap-1.5';
+    col.points.forEach(pt => {
+      const li = document.createElement('li');
+      li.className = 'text-[12px] text-ink leading-snug flex gap-1.5';
+      const dash = document.createElement('span');
+      dash.className = 'text-blue-500 font-bold flex-shrink-0';
+      dash.textContent = '–';
+      const txt = document.createElement('span');
+      txt.textContent = pt;
+      li.appendChild(dash);
+      li.appendChild(txt);
+      list.appendChild(li);
+    });
+    card.appendChild(list);
+    grid.appendChild(card);
+  });
+
+  feedEl.appendChild(grid);
+}
+
+function scrollFeedToBottom(){
+  feedEl.scrollTop = feedEl.scrollHeight;
+}
+
+/* ----------------------------------------------------------------
+   8. BEAT PLAYBACK
+   Plays an array of beats into the feed with a small stagger so it
+   reads like a conversation rather than a wall of text appearing
+   at once. Returns a Promise that resolves once all beats are in.
+   ---------------------------------------------------------------- */
+function playBeats(beats, delayMs = 420){
+  return new Promise(resolve => {
+    let i = 0;
+    function next(){
+      if(i >= beats.length){ resolve(); return; }
+      const beat = beats[i];
+      if(beat.type === 'chat'){
+        appendChatBubble(beat.who, beat.text);
+      } else if(beat.type === 'narrator'){
+        appendNarratorLine(beat.text);
+      }
+      scrollFeedToBottom();
+      i++;
+      setTimeout(next, delayMs);
+    }
+    next();
+  });
+}
+
+/* ----------------------------------------------------------------
+   9. SCENE ORCHESTRATION
+   ---------------------------------------------------------------- */
+async function playScene(index, followUpBeats){
+  state.sceneIndex = index;
+  renderProgressTrack();
+  renderSceneHeader();
+  clearChoices();
+
+  const scene = SCENES[index];
+
+  // Optional lead-in line carried over from the player's previous choice
+  if(followUpBeats && followUpBeats.length){
+    await playBeats(followUpBeats);
+  }
+
+  await playBeats(scene.beats);
+
+  if(scene.flowDiagram){
+    appendFlowDiagram(scene.flowDiagram);
+    scrollFeedToBottom();
+    await wait(500);
+    await playBeats(scene.beatsAfterDiagram || []);
+  }
+
+  if(scene.checklist){
+    appendChecklist(scene.checklist);
+    scrollFeedToBottom();
+    await wait(500);
+    await playBeats(scene.beatsAfterChecklist || []);
+  }
+
+  if(scene.twoColumns){
+    appendTwoColumns(scene.twoColumns);
+    scrollFeedToBottom();
+    await wait(500);
+    await playBeats(scene.beatsAfterColumns || []);
+  }
+
+  renderChoices(scene);
+}
+
+function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+/* ----------------------------------------------------------------
+   10. CHOICE PANEL
+   ---------------------------------------------------------------- */
+function clearChoices(){
+  while(choicePanelEl.firstChild){ choicePanelEl.removeChild(choicePanelEl.firstChild); }
+}
+
+function renderChoices(scene){
+  clearChoices();
+
+  if(!scene.choices || scene.choices.length === 0){
+    // Final scene — show a closing summary action instead of choices
+    const closing = document.createElement('div');
+    closing.className = 'bg-white rounded-[10px] shadow-card border border-blue-100 p-4 flex flex-col sm:flex-row items-center justify-between gap-3';
+
+    const msg = document.createElement('p');
+    msg.className = 'text-[13px] text-ink-soft';
+    msg.textContent = "That's the full story, end to end.";
+    closing.appendChild(msg);
+
+    const btn = document.createElement('button');
+    btn.className = 'bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13px] px-4 py-2 rounded-md transition-colors';
+    btn.textContent = 'View Full Summary';
+    btn.addEventListener('click', openSummaryModal);
+    closing.appendChild(btn);
+
+    choicePanelEl.appendChild(closing);
+    return;
+  }
+
+  const panel = document.createElement('div');
+  panel.className = 'bg-white rounded-[10px] shadow-card border border-blue-100 p-4';
+
+  const label = document.createElement('p');
+  label.className = 'font-display uppercase tracking-wide text-[11px] text-blue-700 font-bold mb-2';
+  label.textContent = 'What does Rahul say?';
+  panel.appendChild(label);
+
+  const row = document.createElement('div');
+  row.className = 'flex flex-col sm:flex-row gap-2';
+
+  scene.choices.forEach(choice => {
+    const btn = document.createElement('button');
+    btn.className = 'flex-1 text-left bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-400 rounded-lg px-3.5 py-2.5 text-[13px] font-semibold text-navy-900 transition-colors';
+    btn.textContent = choice.label;
+    btn.addEventListener('click', () => handleChoice(choice));
+    row.appendChild(btn);
+  });
+
+  panel.appendChild(row);
+  choicePanelEl.appendChild(panel);
+}
+
+async function handleChoice(choice){
+  clearChoices();
+  // Disable interaction visually while the follow-up plays by showing
+  // a brief "..." typing indicator — keeps the feed append-only.
+  appendTypingIndicator();
+  await wait(500);
+  removeLastIfTyping();
+
+  const nextIndex = state.sceneIndex + 1;
+  if(nextIndex >= SCENES.length){
+    return; // already at the end
+  }
+  await playScene(nextIndex, choice.followUp);
+}
+
+function appendTypingIndicator(){
+  const row = document.createElement('div');
+  row.className = 'flex justify-start bubble-anim';
+  row.id = 'typing-indicator';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bg-blue-50 text-blue-400 px-4 py-2.5 rounded-2xl text-[13px] font-bold';
+  bubble.textContent = '· · ·';
+
+  row.appendChild(bubble);
+  feedEl.appendChild(row);
+  scrollFeedToBottom();
+}
+function removeLastIfTyping(){
+  const el = document.getElementById('typing-indicator');
+  if(el) feedEl.removeChild(el);
+}
+
+/* ----------------------------------------------------------------
+   11. SUMMARY MODAL (shown after the final scene)
+   ---------------------------------------------------------------- */
+function openSummaryModal(){
+  const root = document.getElementById('modal-root');
+  while(root.firstChild){ root.removeChild(root.firstChild); }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 bg-navy-900/60 flex items-center justify-center z-50 p-4';
+
+  const modal = document.createElement('div');
+  modal.className = 'bg-white rounded-2xl max-w-md w-full p-6 modal-pop max-h-[85vh] overflow-y-auto';
+
+  const icon = document.createElement('div');
+  icon.className = 'text-4xl text-center mb-2';
+  icon.textContent = '📄';
+  modal.appendChild(icon);
+
+  const title = document.createElement('h2');
+  title.className = 'font-display text-xl font-extrabold text-center text-navy-900 mb-1';
+  title.textContent = "Rahul's Case — Closed";
+  modal.appendChild(title);
+
+  const sub = document.createElement('p');
+  sub.className = 'text-center text-[12px] text-ink-soft mb-4';
+  sub.textContent = 'Reference #SC-PA-48291 · StarCare Health (illustrative example)';
+  modal.appendChild(sub);
+
+  const statsGrid = document.createElement('div');
+  statsGrid.className = 'grid grid-cols-2 gap-2 mb-4';
+  [
+    {label:'Outcome', value:'Approved'},
+    {label:'Path Taken', value:'Denial → Appeal'},
+    {label:'Scenes Completed', value: `${SCENES.length} / ${SCENES.length}`},
+    {label:'Repeat PA Needed?', value:'No'},
+  ].forEach(s => {
+    const stat = document.createElement('div');
+    stat.className = 'bg-blue-50 rounded-lg p-2.5 text-center';
+    const val = document.createElement('div');
+    val.className = 'font-display font-extrabold text-navy-900 text-[15px]';
+    val.textContent = s.value;
+    const lab = document.createElement('div');
+    lab.className = 'text-[10px] uppercase tracking-wide text-ink-soft font-bold';
+    lab.textContent = s.label;
+    stat.appendChild(val); stat.appendChild(lab);
+    statsGrid.appendChild(stat);
+  });
+  modal.appendChild(statsGrid);
+
+  const closeRow = document.createElement('div');
+  closeRow.className = 'flex justify-center gap-2';
+
+  const restartBtn = document.createElement('button');
+  restartBtn.className = 'bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13px] px-4 py-2 rounded-md';
+  restartBtn.textContent = 'Restart Story';
+  restartBtn.addEventListener('click', () => { closeModal(); restartStory(); });
+  closeRow.appendChild(restartBtn);
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'bg-white border border-blue-300 text-blue-700 font-bold text-[13px] px-4 py-2 rounded-md hover:bg-blue-50';
+  closeBtn.textContent = 'Close';
+  closeBtn.addEventListener('click', closeModal);
+  closeRow.appendChild(closeBtn);
+
+  modal.appendChild(closeRow);
+  overlay.appendChild(modal);
+  root.appendChild(overlay);
+}
+function closeModal(){
+  const root = document.getElementById('modal-root');
+  while(root.firstChild){ root.removeChild(root.firstChild); }
+}
+
+/* ----------------------------------------------------------------
+   12. RESTART
+   ---------------------------------------------------------------- */
+function restartStory(){
+  state = { sceneIndex: 0, pendingChoiceResolved:false };
+  while(feedEl.firstChild){ feedEl.removeChild(feedEl.firstChild); }
+  clearChoices();
+  playScene(0, null);
+}
+
+/* ----------------------------------------------------------------
+   13. INIT
+   ---------------------------------------------------------------- */
+document.getElementById('btn-restart').addEventListener('click', () => {
+  if(confirm('Restart the story from Scene 1?')){
+    restartStory();
+  }
+});
+
+playScene(0, null);
+</script>
+</body>
+</html>
