@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Think Like a Marketing Strategist: Grow This Brand</title>
+
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Inter,Segoe UI,sans-serif;
+}
+
+body{
+background:#09111f;
+color:#eef4ff;
+overflow-x:hidden;
+}
+
+#root{
+min-height:100vh;
+}
+
+.container{
+width:min(1180px,94%);
+margin:auto;
+padding:40px 0;
+}
+
+.card{
+background:#131d31;
+border:1px solid rgba(255,255,255,.08);
+border-radius:18px;
+padding:22px;
+margin-bottom:20px;
+animation:fade .45s;
+box-shadow:0 10px 25px rgba(0,0,0,.28);
+}
+
+@keyframes fade{
+from{opacity:0;transform:translateY(10px);}
+to{opacity:1;transform:translateY(0);}
+}
+
+h1{
+font-size:2.3rem;
+margin-bottom:12px;
+}
+
+h2{
+margin-bottom:10px;
+color:#6dc7ff;
+}
+
+h3{
+margin-bottom:8px;
+}
+
+p{
+line-height:1.7;
+color:#cfd8ef;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+gap:18px;
+}
+
+.choice{
+background:#182540;
+padding:18px;
+border-radius:15px;
+cursor:pointer;
+border:2px solid transparent;
+transition:.25s;
+}
+
+.choice:hover{
+transform:translateY(-4px);
+border-color:#6dc7ff;
+}
+
+button{
+padding:12px 18px;
+background:#38bdf8;
+color:#001018;
+border:none;
+border-radius:10px;
+cursor:pointer;
+font-weight:bold;
+margin-top:14px;
+margin-right:10px;
+transition:.2s;
+}
+
+button:hover{
+transform:translateY(-2px);
+}
+
+.secondary{
+background:#25344f;
+color:white;
+}
+
+.option{
+background:#1a2947;
+padding:16px;
+border-radius:12px;
+margin-bottom:12px;
+cursor:pointer;
+border:2px solid transparent;
+transition:.2s;
+}
+
+.option.selected{
+border-color:#5eead4;
+}
+
+input,textarea{
+width:100%;
+padding:12px;
+margin-top:8px;
+margin-bottom:15px;
+background:#0f182b;
+border:1px solid #30415d;
+color:white;
+border-radius:10px;
+}
+
+.progress{
+height:10px;
+background:#20324d;
+border-radius:20px;
+overflow:hidden;
+margin-bottom:25px;
+}
+
+.progress span{
+display:block;
+height:100%;
+background:linear-gradient(90deg,#38bdf8,#7c3aed);
+}
+
+.badge{
+display:inline-block;
+background:#253b5d;
+padding:6px 10px;
+border-radius:100px;
+margin:4px;
+font-size:.9rem;
+}
+
+.claude{
+background:#201932;
+border-left:5px solid #b794f6;
+}
+
+pre{
+white-space:pre-wrap;
+line-height:1.6;
+color:#f5f5f5;
+}
+
+.report{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+gap:18px;
+}
+
+.report .card{
+margin:0;
+}
+
+small{
+color:#90b7e8;
+}
+
+@media(max-width:700px){
+h1{font-size:1.8rem;}
+}
+</style>
+</head>
+
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+
+const businesses=[
+{
+name:"EcoCup",
+industry:"Reusable Drinkware",
+audience:"College students",
+budget:"Low",
+competitors:"Hydro Flask, local bottle brands",
+challenge:"People forget reusable bottles."
+},
+{
+name:"Pixel Bakery",
+industry:"Online Bakery",
+audience:"Young professionals",
+budget:"Medium",
+competitors:"Local bakeries",
+challenge:"Increase repeat customers."
+},
+{
+name:"ZenFit",
+industry:"Fitness Coaching",
+audience:"Busy office workers",
+budget:"Medium",
+competitors:"Fitness influencers",
+challenge:"Stand out from crowded market."
+},
+{
+name:"PetJoy",
+industry:"Pet Accessories",
+audience:"Dog owners",
+budget:"Small",
+competitors:"Amazon sellers",
+challenge:"Build trust."
+}
+];
+
+const platforms=[
+{
+name:"Instagram",
+why:"Excellent for visual storytelling and lifestyle brands."
+},
+{
+name:"LinkedIn",
+why:"Best for professional audiences, expertise and personal brands."
+},
+{
+name:"YouTube",
+why:"Great for education, trust and long-form content."
+},
+{
+name:"TikTok",
+why:"Fast awareness through short entertaining videos."
+},
+{
+name:"Facebook",
+why:"Useful for communities and local businesses."
+},
+{
+name:"X / Twitter",
+why:"Strong for opinions, networking and industry conversations."
+},
+{
+name:"Newsletter",
+why:"Own your audience without depending on algorithms."
+}
+];
+
+const contentPillarsBusiness=[
+"Educational Content",
+"Behind the Brand",
+"Customer Stories",
+"Product Demonstrations",
+"Industry Trends",
+"FAQ & Myth Busting",
+"Community Stories"
+];
+
+const contentPillarsPersonal=[
+"Thought Leadership",
+"Personal Story",
+"Audience Education",
+"Behind the Scenes",
+"Career Lessons",
+"Wins and Failures",
+"Daily Learning"
+];
+
+const eventsBusiness=[
+"Your competitor launches a huge discount campaign.",
+"A creator unexpectedly reviews your product.",
+"Your biggest customer leaves.",
+"One product suddenly goes viral."
+];
+
+const eventsPersonal=[
+"A post goes viral overnight.",
+"You receive a podcast invitation.",
+"Someone copies your content.",
+"A public disagreement starts online.",
+"You gain 20,000 followers in one week."
+];
+
+function ClaudeCard({prompt}){
+return(
+<div className="card claude">
+<h3>🤖 How to ask Claude</h3>
+<p>Prompt engineering lets you collaborate with AI instead of asking vague questions.</p>
+<pre>{prompt}</pre>
+</div>
+)
+}
+
+function App(){
+
+const total=7;
+
+const [step,setStep]=React.useState(0);
+const [mode,setMode]=React.useState("");
+const [data,setData]=React.useState(null);
+const [platformChoice,setPlatformChoice]=React.useState([]);
+const [pillarChoice,setPillarChoice]=React.useState([]);
+const [eventChoice,setEventChoice]=React.useState("");
+const [name,setName]=React.useState("");
+const [expertise,setExpertise]=React.useState("");
+const [story,setStory]=React.useState("");
+
+const randomBusiness=()=>{
+return businesses[Math.floor(Math.random()*businesses.length)];
+};
+
+const next=()=>setStep(step+1);
+
+const progress=((step)/total)*100;
+
+const event=(mode==="personal")?
+eventsPersonal[Math.floor(Math.random()*eventsPersonal.length)]:
+eventsBusiness[Math.floor(Math.random()*eventsBusiness.length)];
+
+return(
+<div className="container">
+
+<div className="progress">
+<span style={{width:progress+"%"}}></span>
+</div>
+
+{step===0&&(
+<div className="card">
+
+<h1>📈 Think Like a Marketing Strategist</h1>
+
+<p>
+Marketing strategy is about understanding people before creating content.
+Instead of asking "What should I post?", strategists ask:
+Who is the audience?
+What problem do they have?
+Why should they trust us?
+Where do they spend time?
+</p>
+
+<br/>
+
+<h2>What is this?</h2>
+<p>
+This simulation teaches you how marketers think through decisions instead of randomly creating posts.
+</p>
+
+<h2>Why does it matter?</h2>
+
+<p>
+Businesses and creators grow because they consistently solve audience problems.
+Strategy makes every post, campaign and advertisement more effective.
+</p>
+
+<div className="grid" style={{marginTop:25}}>
+
+<div className="choice" onClick={()=>{
+setMode("business");
+setData({name:"",industry:"",audience:"",budget:"",competitors:"",challenge:""});
+next();
+}}>
+<h3>🏢 Use My Own Business</h3>
+<p>Plan marketing for an existing company.</p>
+</div>
+
+<div className="choice" onClick={()=>{
+setMode("personal");
+next();
+}}>
+<h3>🙋 Build My Personal Brand</h3>
+<p>Grow yourself as the brand.</p>
+</div>
+
+<div className="choice" onClick={()=>{
+setMode("random");
+setData(randomBusiness());
+next();
+}}>
+<h3>🎲 A New Client Has Arrived</h3>
+<p>Receive a randomly generated client.</p>
+</div>
+
+</div>
+
+</div>
+)}
+
+{step===1&&mode==="business"&&(
+<div className="card">
+
+<h2>Understand the Business</h2>
+
+<p><b>What is this?</b><br/>
+A strategist first understands the company before planning marketing.
+</p>
+
+<p><b>Why does it matter?</b><br/>
+Wrong assumptions create ineffective campaigns.
+</p>
+
+<input placeholder="Business name"
+onChange={e=>setData({...data,name:e.target.value})}/>
+
+<input placeholder="Industry"
+onChange={e=>setData({...data,industry:e.target.value})}/>
+
+<input placeholder="Target audience"
+onChange={e=>setData({...data,audience:e.target.value})}/>
+
+<input placeholder="Budget"
+onChange={e=>setData({...data,budget:e.target.value})}/>
+
+<input placeholder="Competitors"
+onChange={e=>setData({...data,competitors:e.target.value})}/>
+
+<textarea
+placeholder="Main marketing challenge"
+onChange={e=>setData({...data,challenge:e.target.value})}
+/>
+
+<button onClick={next}>Continue</button>
+
+<ClaudeCard
+prompt={`Act as my marketing strategist.
+
+Business:
+${data?.name||"[Business Name]"}
+
+Industry:
+${data?.industry||"[Industry]"}
+
+Audience:
+${data?.audience||"[Audience]"}
+
+Explain my biggest opportunities and risks in beginner-friendly language.`}
+/>
+
+</div>
+)}
+
+{step===1&&mode==="personal"&&(
+<div className="card">
+
+<h2>Build Your Personal Brand</h2>
+
+<p><b>What is this?</b><br/>
+Your expertise, story and reputation become the product.
+</p>
+
+<p><b>Why does it matter?</b><br/>
+People trust people before they trust companies.
+</p>
+
+<input placeholder="Your Name"
+onChange={e=>setName(e.target.value)}/>
+
+<input placeholder="Your Expertise"
+onChange={e=>setExpertise(e.target.value)}/>
+
+<textarea
+placeholder="Your Story"
+onChange={e=>setStory(e.target.value)}
+/>
+
+<button onClick={next}>Continue</button>
+
+<ClaudeCard
+prompt={`Help ${name||"[Your Name]"} build a personal brand around ${expertise||"[Expertise]"}.
+
+My story:
+${story||"[Story]"}
+
+Identify my audience, positioning and what makes me memorable.`}
+/>
+
+</div>
+)}
+
+{step===1&&mode==="random"&&(
+<div>
+
+<div className="card">
+
+<h2>Your New Client</h2>
+
+<div className="badge">{data.name}</div>
+<div className="badge">{data.industry}</div>
+<div className="badge">{data.audience}</div>
+<div className="badge">Budget: {data.budget}</div>
+
+<p><b>Competitors:</b> {data.competitors}</p>
+
+<p><b>Challenge:</b> {data.challenge}</p>
+
+<button onClick={next}>Analyze Audience</button>
+
+</div>
+
+<ClaudeCard
+prompt={`Analyze the business ${data.name}.
+
+Industry:
+${data.industry}
+
+Audience:
+${data.audience}
+
+Budget:
+${data.budget}
+
+Suggest strategic marketing priorities before creating content.`}
+/>
+
+</div>
+)}
+
+{step===2&&(
+<div>
+
+<div className="card">
+
+<h2>Choose Platforms</h2>
+
+<p><b>What is this?</b><br/>
+Every platform attracts different audiences and behaviours.</p>
+
+<p><b>Why does it matter?</b><br/>
+The best marketers focus where attention already exists.</p>
+
+{platforms.map(p=>{
+
+const recommended=
+mode==="personal"
+?["LinkedIn","YouTube","X / Twitter","Newsletter"].includes(p.name)
+:["Instagram","YouTube","Facebook","TikTok"].includes(p.name);
+
+return(
+<div
+key={p.name}
+className={"option "+(platformChoice.includes(p.name)?"selected":"")}
+onClick={()=>{
+if(platformChoice.includes(p.name)){
+setPlatformChoice(platformChoice.filter(x=>x!==p.name))
+}else{
+setPlatformChoice([...platformChoice,p.name])
+}
+}}>
+<h3>{p.name} {recommended?"⭐":""}</h3>
+<p>{p.why}</p>
+<small>{recommended?
+"Recommended for this scenario."
+:
+"Useful only if it matches your audience."
+}</small>
+</div>
+)
+
+})}
+
+<button onClick={next}>Continue</button>
+
+</div>
+
+<ClaudeCard
+prompt={
+mode==="personal"
+?
+`Suggest the best social platforms for ${name||"[Name]"} who teaches ${expertise||"[Niche]"}.
+Explain why each platform fits the audience.`
+:
+`Recommend the best marketing platforms for my business.
+Explain why each platform is or is not suitable.`
+}
+/>
+
+</div>
+)}
+
+{step===3&&(
+<div>
+
+<div className="card">
+
+<h2>Select Your Three Content Pillars</h2>
+
+<p><b>What is this?</b><br/>
+Content pillars are recurring themes that keep your messaging consistent.</p>
+
+<p><b>Why does it matter?</b><br/>
+Random content confuses audiences. Consistent themes build trust.</p>
+
+{(mode==="personal"?contentPillarsPersonal:contentPillarsBusiness).map(x=>
+
+<div
+key={x}
+className={"option "+(pillarChoice.includes(x)?"selected":"")}
+onClick={()=>{
+if(pillarChoice.includes(x)){
+setPillarChoice(pillarChoice.filter(i=>i!==x));
+}else if(pillarChoice.length<3){
+setPillarChoice([...pillarChoice,x]);
+}
+}}>
+<h3>{x}</h3>
+
+<p>
+{mode==="personal"
+?
+({
+"Thought Leadership":"Share opinions and expertise.",
+"Personal Story":"Creates emotional trust.",
+"Audience Education":"Teach consistently.",
+"Behind the Scenes":"Show authenticity.",
+"Career Lessons":"Demonstrate experience.",
+"Wins and Failures":"Humanizes your journey.",
+"Daily Learning":"Shows continuous growth."
+}[x])
+:
+"Supports a different customer need and buying stage."
+}
+</p>
+
+</div>
+
+)}
+
+<button onClick={next}>Continue</button>
+
+</div>
+
+<ClaudeCard
+prompt={
+mode==="personal"
+?
+`Generate content pillars for ${name||"[Name]"} in ${expertise||"[Niche]"} and explain how each helps grow authority.`
+:
+`Generate content pillars for my business and explain how each supports awareness, trust and sales.`
+}
+/>
+
+</div>
+)}
+
+{step===4&&(
+<div>
+
+<div className="card">
+
+<h2>30-Day Marketing Roadmap</h2>
+
+<p><b>What is this?</b><br/>
+Roadmaps define strategic focus instead of random daily posting.</p>
+
+<p><b>Why does it matter?</b><br/>
+Consistency compounds over time.</p>
+
+<div className="option">
+<h3>Week 1</h3>
+<p>
+{mode==="personal"
+?
+"Define your point of view. Optimize bio, profile photo, headline and messaging."
+:
+"Understand customers and clarify positioning."
+}
+</p>
+</div>
+
+<div className="option">
+<h3>Week 2</h3>
+<p>Publish consistently using your chosen content pillars.</p>
+</div>
+
+<div className="option">
+<h3>Week 3</h3>
+<p>Engage with communities, respond to comments and collect feedback.</p>
+</div>
+
+<div className="option">
+<h3>Week 4</h3>
+<p>Measure results, improve messaging and double down on what worked.</p>
+</div>
+
+<button onClick={next}>Continue</button>
+
+</div>
+
+<ClaudeCard
+prompt={
+mode==="personal"
+?
+`Create a 30-day personal branding strategy for ${name||"[Name]"}.
+Focus on weekly goals instead of individual posts.`
+:
+`Create a 30-day marketing roadmap using weekly strategic goals instead of content ideas.`
+}
+/>
+
+</div>
+)}
+
+{step===5&&(
+<div>
+
+<div className="card">
+
+<h2>Unexpected Marketing Event</h2>
+
+<p><b>Scenario:</b></p>
+
+<h3>{event}</h3>
+
+<div className="option"
+onClick={()=>setEventChoice("Respond calmly and strategically.")}>
+Respond calmly and strategically.
+</div>
+
+<div className="option"
+onClick={()=>setEventChoice("React emotionally online.")}>
+React emotionally.
+</div>
+
+<div className="option"
+onClick={()=>setEventChoice("Ignore it completely.")}>
+Ignore it.
+</div>
+
+{eventChoice&&
+<div className="card">
+<h3>Consequence</h3>
+<p>
+{
+eventChoice==="Respond calmly and strategically."
+?
+"Trust increases because thoughtful brands stay consistent under pressure."
+:
+eventChoice==="React emotionally online."
+?
+"Short-term attention but possible reputation damage."
+:
+"You avoid conflict but may miss an opportunity."
+}
+</p>
+
+<button onClick={next}>View Growth Report</button>
+
+</div>
+}
+
+</div>
+
+<ClaudeCard
+prompt={
+mode==="personal"
+?
+`If ${name||"[Name]"} experiences this event:
+"${event}"
+Explain the best strategic response and long-term branding impact.`
+:
+`My business experienced:
+"${event}"
+
+What should a marketing strategist do next?`
+}
+/>
+
+</div>
+)}
+
+{step===6&&(
+<div>
+
+<div className="card">
+<h1>🏆 Growth Report</h1>
+
+<div className="report">
+
+<div className="card">
+<h3>Audience Understanding</h3>
+<p>
+Successful marketing begins with empathy before promotion.
+</p>
+</div>
+
+<div className="card">
+<h3>Platform Strategy</h3>
+<p>{platformChoice.join(", ")||"No platform selected."}</p>
+</div>
+
+<div className="card">
+<h3>Content Strategy</h3>
+<p>{pillarChoice.join(", ")||"No pillars selected."}</p>
+</div>
+
+<div className="card">
+<h3>Growth Potential</h3>
+<p>High if consistency and learning continue.</p>
+</div>
+
+<div className="card">
+<h3>Best Decision</h3>
+<p>Choosing focused platforms and clear positioning.</p>
+</div>
+
+<div className="card">
+<h3>Biggest Mistake</h3>
+<p>Trying to be everywhere instead of being memorable somewhere.</p>
+</div>
+
+<div className="card">
+<h3>Three Marketing Lessons</h3>
+
+<ul style={{marginLeft:18,lineHeight:1.8}}>
+{
+mode==="personal"
+?
+<>
+<li>Authenticity creates trust.</li>
+<li>Consistency beats occasional viral moments.</li>
+<li>Niche clarity makes people remember you.</li>
+</>
+:
+<>
+<li>Know your audience before promoting.</li>
+<li>Strategy guides every campaign.</li>
+<li>Measure and improve continuously.</li>
+</>
+}
+</ul>
+
+</div>
+
+</div>
+
+<button onClick={()=>{
+window.location.reload();
+}}>
+🔄 Replay Simulation
+</button>
+
+</div>
+
+<ClaudeCard
+prompt={
+mode==="personal"
+?
+`Review ${name||"[Name]"}'s personal branding strategy and provide an honest critique with improvements.`
+:
+`Review my marketing strategy and explain what an experienced strategist would improve first.`
+}
+/>
+
+</div>
+)}
+
+</div>
+)
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+
+</script>
+
+</body>
+</html>
